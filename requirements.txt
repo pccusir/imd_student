@@ -1,0 +1,13 @@
+line-bot-sdk
+flask
+openai
+gunicorn
+azure-ai-language-questionanswering
+gspread
+oauth2client
+google-auth
+google-api-python-client
+google-auth-httplib2 
+google-auth-oauthlib
+azure-cognitiveservices-vision-computervision
+pillow
