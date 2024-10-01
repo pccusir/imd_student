@@ -61,20 +61,6 @@ credential = AzureKeyCredential(os.getenv('AZURE_KEY'))
 knowledge_base_project = os.getenv('PROJECT')
 deployment = 'production'
 
-# Set up Google Sheets API
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials as sac
-from google.oauth2.service_account import Credentials
-from googleapiclient.discovery import build
-SERVICE_ACCOUNT_FILE = 'google_auth.json'
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-SPREADSHEET_ID = os.getenv('SHEET_ID') # Replace with your Google Sheet ID
-creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
-SHEET_NAME = 'stu'
-service = build('sheets', 'v4', credentials=creds)
-sh = service.spreadsheets()
-
-
 # Authenticate with the Azure Computer Vision service
 vision_subscription_key = os.getenv('VISION_SUBSCRIPTION_KEY')
 vision_endpoint = os.getenv('VISION_ENDPOINT')
@@ -162,31 +148,6 @@ def extract_text_from_image(image_path):
 
 
 
-# 紀錄用戶資料
-def write_to_sheet(event):
-    _id = event.source.user_id
-    profile = line_bot_api.get_profile(_id)
-        
-    _name = profile.display_name
- 
-    dt1 = datetime.utcnow().replace(tzinfo=timezone.utc)
-    dt2 = dt1.astimezone(timezone(timedelta(hours=8)))
-    dt=dt2.strftime("%Y-%m-%d %H:%M:%S")
-    values = [[_name,event.message.text,dt ]]
-    
-    # Prepare the data in the format expected by the API
-    body = {
-        'values': values
-    }
-
-    result = service.spreadsheets().values().append(
-        spreadsheetId=SPREADSHEET_ID,
-        range=SHEET_NAME,
-        valueInputOption='RAW',
-        insertDataOption='INSERT_ROWS',  # This option ensures new rows are inserted
-        body=body
-    ).execute()  
-
 
 
 # 監聽所有來自 /callback 的 Post Request
@@ -234,28 +195,6 @@ def handle_image_message(event):
     try:
         gpt_answer = Chatgpt_response("solve or descript the problem:\n\n"+extracted_text)
         print(gpt_answer)
-        _id = event.source.user_id
-        profile = line_bot_api.get_profile(_id)
-            # 紀錄用戶資料
-        _name = profile.display_name
-     
-        dt1 = datetime.utcnow().replace(tzinfo=timezone.utc)
-        dt2 = dt1.astimezone(timezone(timedelta(hours=8)))
-        dt=dt2.strftime("%Y-%m-%d %H:%M:%S")
-        values = [[_name,gpt_answer,dt ]]
-        
-        # Prepare the data in the format expected by the API
-        body = {
-            'values': values
-        }
-    
-        result = service.spreadsheets().values().append(
-            spreadsheetId=SPREADSHEET_ID,
-            range=SHEET_NAME,
-            valueInputOption='RAW',
-            insertDataOption='INSERT_ROWS',  # This option ensures new rows are inserted
-            body=body
-        ).execute()        
         line_bot_api.reply_message(event.reply_token, TextSendMessage(gpt_answer))
     except:
         print(traceback.format_exc())
@@ -271,8 +210,6 @@ def handle_image_message(event):
 # 處理文字訊息
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    write_to_sheet(event)
-    
     msg = event.message.text
     if msg[0:2]=='習題':
         try:
@@ -299,8 +236,6 @@ def handle_message(event):
 @handler.add(PostbackEvent)
 def handle_message(event):
     print(event.postback.data)
-    write_to_sheet(event)
-
 
         
 if __name__ == "__main__":
